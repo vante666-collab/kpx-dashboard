@@ -1,0 +1,23 @@
+# SK이노베이션 E&S 임원 대시보드 — 정적 사이트 배포 설정
+# 빌드 단계 없는 단일 HTML(index.html) 정적 사이트
+
+[build]
+  publish = "_site"
+
+[functions]
+  directory = "netlify/functions"
+  node_bundler = "esbuild"
+
+# index.html 을 루트로 서빙
+[[redirects]]
+  from = "/"
+  to = "/index.html"
+  status = 200
+
+# 보안 헤더
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "SAMEORIGIN"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"

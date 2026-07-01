@@ -1,0 +1,31 @@
+# 환경변수 (API 키 등) — 절대 커밋 금지
+.env
+.env.*
+!.env.example
+
+# 의존성
+node_modules/
+
+# Netlify / 배포 산출물
+.netlify
+_site/
+
+# 로컬 캐시 · 데이터
+s3cache/
+.gstack/
+__pycache__/
+*.pyc
+
+# 로그
+*.log
+
+# OS
+Thumbs.db
+.DS_Store
+
+# 별개 하위 프로젝트 (독립 저장소)
+asset-telegram-relay/
+asset-tracker/
+
+# Claude Code 로컬 설정 (시크릿 포함) — 커밋 금지
+.claude/settings.local.json

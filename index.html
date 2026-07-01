@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SK이노베이션 E&S · 임원 대시보드</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<style>
+  :root {
+    --card: #eee8d5;
+    --ring: #d33682;
+    --input: #839496;
+    --muted: #93a1a1;
+    --accent: #cb4b16;
+    --border: #839496;
+    --radius: 0.25rem;
+    --chart-1: #268bd2;
+    --chart-2: #2aa198;
+    --chart-3: #d33682;
+    --chart-4: #cb4b16;
+    --chart-5: #dc322f;
+    --popover: #eee8d5;
+    --primary: #d33682;
+    --sidebar: #fdf6e3;
+    --font-mono: "Space Mono", monospace;
+    --font-sans: "Outfit", sans-serif;
+    --font-serif: "Outfit", sans-serif;
+    --secondary: #2aa198;
+    --background: #fdf6e3;
+    --foreground: #073642;
+    --destructive: #dc322f;
+    --shadow-blur: 4px;
+    --shadow-color: hsl(196 83% 10%);
+    --shadow-spread: 0px;
+    --shadow-opacity: 0.15;
+    --card-foreground: #073642;
+    --shadow-offset-x: 2px;
+    --shadow-offset-y: 2px;
+    --muted-foreground: #073642;
+    --accent-foreground: #ffffff;
+    --popover-foreground: #073642;
+    --primary-foreground: #ffffff;
+    --secondary-foreground: #ffffff;
+    --destructive-foreground: #ffffff;
+    --green: #859900;
+    --shadow: var(--shadow-offset-x) var(--shadow-offset-y) var(--shadow-blur) var(--shadow-spread) hsl(196 83% 10% / var(--shadow-opacity));
+  }
+  .dark {
+    --card: #073642;
+    --ring: #d33682;
+    --input: #586e75;
+    --muted: #586e75;
+    --accent: #cb4b16;
+    --border: #586e75;
+    --chart-1: #268bd2;
+    --chart-2: #2aa198;
+    --chart-3: #d33682;
+    --chart-4: #cb4b16;
+    --chart-5: #dc322f;
+    --popover: #073642;
+    --primary: #d33682;
+    --sidebar: #002b36;
+    --secondary: #2aa198;
+    --background: #002b36;
+    --foreground: #93a1a1;
+    --destructive: #dc322f;
+    --card-foreground: #93a1a1;
+    --muted-foreground: #93a1a1;
+    --accent-foreground: #ffffff;
+    --popover-foreground: #93a1a1;
+    --primary-foreground: #ffffff;
+    --secondary-foreground: #ffffff;
+    --destructive-foreground: #ffffff;
+    --green: #859900;
+  }
+
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:var(--font-sans);background:var(--background);color:var(--foreground);
+       padding:clamp(12px,3vw,28px);transition:background .25s,color .25s}
+
+  /* 3D Gradient Card (ported from GradientCard: mouse tilt + glow + glass) */
+  .card3d{position:relative;overflow:hidden;transform-style:preserve-3d;
+    transition:transform .45s cubic-bezier(.2,.8,.2,1),box-shadow .45s ease;will-change:transform}
+  .card3d::before{ /* bottom purple/blue glow */
+    content:"";position:absolute;left:0;right:0;bottom:0;height:66%;pointer-events:none;z-index:0;
+    background:
+      radial-gradient(ellipse at bottom right,color-mix(in srgb,var(--chart-3) 55%,transparent) -10%,transparent 70%),
+      radial-gradient(ellipse at bottom left,color-mix(in srgb,var(--chart-1) 55%,transparent) -10%,transparent 70%),
+      radial-gradient(circle at bottom center,color-mix(in srgb,var(--accent) 50%,transparent) -20%,transparent 60%);
+    filter:blur(38px);opacity:.5;transition:opacity .45s ease}
+  .card3d::after{ /* glass reflection + glowing bottom edge */
+    content:"";position:absolute;inset:0;pointer-events:none;z-index:1;border-radius:inherit;
+    background:
+      linear-gradient(90deg,transparent 0%,color-mix(in srgb,var(--chart-3) 85%,#fff) 50%,transparent 100%) bottom/100% 2px no-repeat,
+      linear-gradient(135deg,rgba(255,255,255,.10) 0%,rgba(255,255,255,0) 40%,rgba(255,255,255,0) 80%,rgba(255,255,255,.06) 100%);
+    opacity:.55;transition:opacity .45s ease}
+  .card3d:hover{box-shadow:0 -10px 60px 6px color-mix(in srgb,var(--chart-1) 28%,transparent),
+    0 12px 34px rgba(0,0,0,.28)}
+  .card3d:hover::before{opacity:.9}
+  .card3d:hover::after{opacity:.85}
+  .card3d>*{position:relative;z-index:2}
+  @media(prefers-reduced-motion:reduce){.card3d{transition:none}}
+
+  header{margin-bottom:18px;display:flex;flex-wrap:wrap;align-items:flex-start;gap:10px}
+  .head-text{flex:1;min-width:240px}
+  header h1{font-family:var(--font-serif);font-size:clamp(18px,2.6vw,26px);color:var(--primary);
+            font-weight:700;letter-spacing:-.3px}
+  header p{color:var(--muted-foreground);font-size:clamp(11px,1.4vw,13px);margin-top:4px}
+  .status{font-family:var(--font-mono);font-size:11px;color:var(--muted-foreground);margin-top:6px}
+  .status.err{color:var(--destructive)}
+  .toggle{font-family:var(--font-sans);font-size:12px;font-weight:600;cursor:pointer;
+          background:var(--secondary);color:var(--secondary-foreground);border:1px solid var(--border);
+          border-radius:var(--radius);padding:7px 12px;transition:background .2s}
+  .toggle:hover{background:var(--accent);color:var(--accent-foreground)}
+
+  .kpi-grid{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:8px;margin-bottom:18px}
+  .kpi{background:var(--card);color:var(--card-foreground);border:1px solid var(--border);
+       border-radius:var(--radius);padding:8px 9px;box-shadow:var(--shadow);min-width:0}
+  .kpi .label{font-size:clamp(9px,.8vw,11px);color:var(--muted-foreground);font-weight:600;
+       line-height:1.25;min-height:26px;white-space:normal;overflow:hidden}
+  .kpi .value{font-family:var(--font-serif);font-size:clamp(14px,1.5vw,20px);font-weight:700;
+       color:var(--primary);margin:3px 0 1px;white-space:nowrap}
+  .kpi .value .unit{font-family:var(--font-sans);font-size:clamp(9px,.9vw,12px);font-weight:600;
+       color:var(--muted-foreground);margin-left:2px}
+  .kpi .chg{font-family:var(--font-mono);font-size:clamp(9px,.85vw,11px);font-weight:500;white-space:nowrap}
+  .kpi .chg.up{color:var(--green)} .kpi .chg.down{color:var(--destructive)}
+  @media(max-width:720px){.kpi-grid{grid-auto-flow:row;grid-template-columns:repeat(5,1fr)}}
+
+  .charts{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media(max-width:820px){.charts{grid-template-columns:1fr}}
+  .panel{background:var(--card);color:var(--card-foreground);border:1px solid var(--border);
+         border-radius:var(--radius);padding:14px 16px 8px;box-shadow:var(--shadow)}
+  .panel h2{font-family:var(--font-serif);font-size:14px;color:var(--foreground);font-weight:700;margin-bottom:2px}
+  .panel .sub{font-family:var(--font-mono);font-size:11px;color:var(--muted-foreground);margin-bottom:10px}
+  .canvas-wrap{position:relative;height:clamp(220px,32vh,320px)}
+  footer{margin-top:16px;font-family:var(--font-mono);font-size:11px;color:var(--muted-foreground);text-align:center}
+
+  /* Tabs */
+  .tabs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px;border-bottom:1px solid var(--border)}
+  .tab{font-family:var(--font-sans);font-size:13px;font-weight:600;cursor:pointer;
+       background:transparent;color:var(--muted-foreground);border:none;
+       border-bottom:2px solid transparent;padding:9px 14px;margin-bottom:-1px;transition:color .15s,border-color .15s}
+  .tab:hover{color:var(--foreground)}
+  .tab.active{color:var(--primary);border-bottom-color:var(--primary)}
+  .view[hidden]{display:none}
+
+  /* Data tables */
+  .table-wrap{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);
+              box-shadow:var(--shadow);overflow-x:auto}
+  table{border-collapse:collapse;width:100%;font-size:13px}
+  thead th{position:sticky;top:0;background:var(--primary);color:var(--primary-foreground);
+           font-family:var(--font-sans);font-weight:600;text-align:left;padding:10px 14px;white-space:nowrap}
+  tbody td{padding:9px 14px;border-bottom:1px solid var(--border);white-space:nowrap}
+  tbody td.num{font-family:var(--font-mono);text-align:right}
+  tbody tr:nth-child(even){background:color-mix(in srgb,var(--muted) 22%,transparent)}
+  tbody tr:hover{background:color-mix(in srgb,var(--accent) 14%,transparent)}
+  .table-title{font-family:var(--font-serif);font-size:15px;color:var(--foreground);font-weight:700;margin:0 0 4px}
+  .table-sub{font-family:var(--font-mono);font-size:11px;color:var(--muted-foreground);margin-bottom:10px}
+</style>
+</head>
+<body>
+  <header>
+    <div class="head-text">
+      <h1>SK이노베이션 E&amp;S · 임원 대시보드</h1>
+      <p>통합 6개월 경영 실적 · 단위 조원 / % · 데이터: Supabase 실시간 조회</p>
+      <div class="status" id="status">데이터 불러오는 중…</div>
+    </div>
+    <button class="toggle" id="themeToggle" type="button">🌙 다크</button>
+  </header>
+
+  <nav class="tabs" id="tabs"></nav>
+
+  <div class="view" id="view-overview">
+    <section class="kpi-grid" id="kpiGrid"></section>
+    <section class="charts">
+      <div class="panel card3d">
+        <h2>월별 매출 추이</h2>
+        <div class="sub">monthly_pnl · 조원</div>
+        <div class="canvas-wrap"><canvas id="pnlChart"></canvas></div>
+      </div>
+      <div class="panel card3d">
+        <h2>부문별 매출</h2>
+        <div class="sub">divisions · 조원 (매출 순)</div>
+        <div class="canvas-wrap"><canvas id="divChart"></canvas></div>
+      </div>
+    </section>
+  </div>
+
+  <div class="view" id="view-data" hidden></div>
+
+  <footer>SK이노베이션 E&amp;S 통합 6개월 리포트 · 실습용 가상 데이터</footer>
+
+<script>
+const SUPABASE_URL = "https://ygpjkepepqnqzsxqblzb.supabase.co";
+const SUPABASE_KEY = "sb_publishable_9Zw_bcVZAI11gC49UMqWkg_Adz5MH1H";
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const statusEl = document.getElementById("status");
+
+const fmt = n => (Math.round(n*100)/100).toLocaleString("ko-KR");
+const cssVar = name => getComputedStyle(document.body).getPropertyValue(name).trim();
+const hexA = (hex,a) => {
+  const h = hex.replace("#","");
+  const b = h.length===3 ? h.split("").map(c=>c+c).join("") : h;
+  const n = parseInt(b,16);
+  return `rgba(${(n>>16)&255},${(n>>8)&255},${n&255},${a})`;
+};
+
+let pnlData=[], divData=[], charts={};
+
+// detail-table definitions: tab label + table + column config
+const DATASETS = [
+  {id:"kpi_cards", label:"KPI 지표", table:"kpi_cards", order:{col:"id"},
+   cols:[{k:"metric",h:"지표"},{k:"value",h:"값",num:true},{k:"unit",h:"단위"},
+         {k:"yoy_change",h:"전년대비"},{k:"trend",h:"추세"},{k:"note",h:"비고"}]},
+  {id:"monthly_pnl", label:"월별 손익", table:"monthly_pnl", order:{col:"month"},
+   cols:[{k:"month",h:"월"},{k:"revenue",h:"매출",num:true},{k:"operating_profit",h:"영업이익",num:true},
+         {k:"ebitda",h:"EBITDA",num:true},{k:"net_income",h:"순이익",num:true}]},
+  {id:"divisions", label:"부문별", table:"divisions", order:{col:"revenue",asc:false},
+   cols:[{k:"division",h:"부문"},{k:"revenue",h:"매출",num:true},{k:"operating_profit",h:"영업이익",num:true},
+         {k:"margin",h:"마진(%)",num:true},{k:"yoy_change",h:"전년대비"}]},
+  {id:"regional_sales", label:"지역별", table:"regional_sales", order:{col:"revenue",asc:false},
+   cols:[{k:"region",h:"지역"},{k:"revenue",h:"매출",num:true},{k:"share",h:"비중(%)",num:true}]},
+  {id:"capex", label:"CAPEX", table:"capex", order:{col:"amount",asc:false},
+   cols:[{k:"area",h:"투자영역"},{k:"amount",h:"금액",num:true},{k:"share",h:"비중(%)",num:true}]},
+  {id:"safety_esg_monthly", label:"안전·ESG", table:"safety_esg_monthly", order:{col:"month"},
+   cols:[{k:"month",h:"월"},{k:"ltir",h:"LTIR",num:true},{k:"scope1_co2_mt",h:"Scope1 CO₂(백만t)",num:true},
+         {k:"female_exec_ratio",h:"여성임원비율(%)",num:true}]},
+  {id:"top_business", label:"상위 사업", table:"top_business", order:{col:"revenue",asc:false},
+   cols:[{k:"business",h:"사업"},{k:"revenue",h:"매출",num:true},{k:"yoy_change",h:"전년대비"}]},
+];
+const dataCache = {};
+
+async function load(){
+  try{
+    const kpi = await sb.from("kpi_cards").select("*").order("id");
+    if(kpi.error) throw kpi.error;
+    // fetch every dataset once (also feeds charts)
+    await Promise.all(DATASETS.map(async ds=>{
+      const q = sb.from(ds.table).select("*").order(ds.order.col,{ascending:ds.order.asc!==false});
+      const res = await q;
+      if(res.error) throw res.error;
+      dataCache[ds.id] = res.data;
+    }));
+    pnlData = [...dataCache.monthly_pnl].sort((a,b)=>a.month<b.month?-1:1);
+    divData = [...dataCache.divisions].sort((a,b)=>b.revenue-a.revenue);
+    renderKpi(kpi.data);
+    drawCharts();
+    buildTabs();
+    init3D();
+    statusEl.textContent = "최종 갱신: " + new Date().toLocaleString("ko-KR");
+  }catch(e){
+    statusEl.classList.add("err");
+    statusEl.textContent = "데이터 로드 실패: " + (e.message||e);
+    console.error(e);
+  }
+}
+
+const esc = v => (v==null?"":String(v)).replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
+
+// 3D mouse-tilt for .card3d (GradientCard effect)
+function init3D(){
+  document.querySelectorAll(".card3d").forEach(card=>{
+    if(card.dataset.tilt) return;
+    card.dataset.tilt = "1";
+    card.addEventListener("mousemove", e=>{
+      const r = card.getBoundingClientRect();
+      const rx = -((e.clientY - r.top - r.height/2)/r.height)*6;
+      const ry = ((e.clientX - r.left - r.width/2)/r.width)*6;
+      card.style.transform = `perspective(1000px) rotateX(${rx}deg) rotateY(${ry}deg) translateY(-5px)`;
+    });
+    card.addEventListener("mouseleave", ()=>{ card.style.transform = ""; });
+  });
+}
+
+function renderTable(ds){
+  const rows = dataCache[ds.id] || [];
+  const head = ds.cols.map(c=>`<th>${c.h}</th>`).join("");
+  const body = rows.map(r=>"<tr>"+ds.cols.map(c=>{
+    const v = r[c.k];
+    const cell = c.num && v!=null ? fmt(v) : esc(v);
+    return `<td class="${c.num?"num":""}">${cell}</td>`;
+  }).join("")+"</tr>").join("");
+  return `<p class="table-title">${ds.label}</p>
+    <p class="table-sub">${ds.table} · ${rows.length}건</p>
+    <div class="table-wrap"><table><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div>`;
+}
+
+function showTab(id){
+  document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("active", t.dataset.id===id));
+  const overview = id==="overview";
+  document.getElementById("view-overview").hidden = !overview;
+  const dv = document.getElementById("view-data");
+  dv.hidden = overview;
+  if(overview){
+    requestAnimationFrame(()=>Object.values(charts).forEach(c=>c&&c.resize()));
+  }else{
+    const ds = DATASETS.find(d=>d.id===id);
+    dv.innerHTML = renderTable(ds);
+  }
+}
+
+function buildTabs(){
+  const nav = document.getElementById("tabs");
+  const tabs = [{id:"overview",label:"개요"}, ...DATASETS.map(d=>({id:d.id,label:d.label}))];
+  nav.innerHTML = tabs.map(t=>`<button class="tab" type="button" data-id="${t.id}">${t.label}</button>`).join("");
+  nav.querySelectorAll(".tab").forEach(b=>b.addEventListener("click",()=>showTab(b.dataset.id)));
+  showTab("overview");
+}
+
+function renderKpi(rows){
+  document.getElementById("kpiGrid").innerHTML = rows.map(r=>{
+    const up = r.trend === "up";
+    return `<div class="kpi card3d">
+      <div class="label">${r.metric}</div>
+      <div class="value">${fmt(r.value)}<span class="unit">${r.unit||""}</span></div>
+      <div class="chg ${up?"up":"down"}">${up?"▲":"▼"} ${r.yoy_change||""}</div>
+    </div>`;
+  }).join("");
+  init3D();
+}
+
+function drawCharts(){
+  const c1 = cssVar("--chart-1"), c4 = cssVar("--chart-4");
+  const grid = hexA(cssVar("--border"), .9);
+  const tick = cssVar("--muted-foreground");
+  Chart.defaults.font.family = cssVar("--font-sans") || "Poppins, sans-serif";
+  Chart.defaults.color = tick;
+
+  Object.values(charts).forEach(ch=>ch && ch.destroy());
+
+  const accent = cssVar("--accent"), cardc = cssVar("--card");
+  const revs = pnlData.map(r=>r.revenue);
+  const peak = revs.indexOf(Math.max(...revs));
+  // soft glow under the line
+  const glow={id:"glow",beforeDatasetDraw(chart,args){
+    if(args.index!==0) return;
+    const {ctx:g}=chart; g.save();
+    g.shadowColor=hexA(c1,.45); g.shadowBlur=12; g.shadowOffsetY=4;
+  },afterDatasetDraw(chart,args){ if(args.index===0) chart.ctx.restore(); }};
+
+  charts.pnl = new Chart(document.getElementById("pnlChart"),{
+    type:"line",
+    data:{labels:pnlData.map(r=>r.month),
+      datasets:[{label:"매출",data:revs,
+        borderColor:c1,backgroundColor:hexA(c1,.12),
+        borderWidth:3,tension:.4,fill:true,cubicInterpolationMode:"monotone",
+        pointRadius:revs.map((_,i)=>i===peak?6:3.5),
+        pointHoverRadius:revs.map((_,i)=>i===peak?8:5.5),
+        pointBackgroundColor:revs.map((_,i)=>i===peak?accent:c1),
+        pointBorderColor:cardc,pointBorderWidth:2}]},
+    plugins:[glow],
+    options:{maintainAspectRatio:false,
+      interaction:{mode:"index",intersect:false},
+      layout:{padding:{top:10}},
+      plugins:{legend:{display:false},
+        tooltip:{backgroundColor:cssVar("--popover")||cardc,titleColor:cssVar("--foreground"),
+          bodyColor:cssVar("--foreground"),borderColor:c1,borderWidth:1,padding:10,
+          displayColors:false,cornerRadius:6,
+          callbacks:{label:c=>"매출 "+fmt(c.parsed.y)+" 조원"}}},
+      scales:{y:{beginAtZero:false,border:{display:false},grid:{color:grid,drawTicks:false},
+                ticks:{font:{size:11},padding:8,callback:v=>v+"조"}},
+              x:{border:{display:false},grid:{display:false},
+                ticks:{font:{size:10},maxRotation:0,autoSkip:true,autoSkipPadding:14}}}}
+  });
+
+  const palette=["--chart-1","--chart-2","--chart-3","--chart-4","--chart-5"].map(cssVar);
+  const divVals=divData.map(r=>r.revenue);
+  const divColors=divVals.map((_,i)=>palette[i%palette.length]);
+  // value labels at bar ends
+  const barLabels={id:"barLabels",afterDatasetsDraw(chart){
+    const {ctx:g}=chart, meta=chart.getDatasetMeta(0);
+    g.save(); g.font="600 11px "+(cssVar("--font-mono")||"monospace");
+    g.fillStyle=cssVar("--foreground"); g.textBaseline="middle";
+    meta.data.forEach((bar,i)=>{ g.fillText(fmt(divVals[i]), bar.x+6, bar.y); });
+    g.restore();
+  }};
+  charts.div = new Chart(document.getElementById("divChart"),{
+    type:"bar",
+    data:{labels:divData.map(r=>r.division),
+      datasets:[{label:"매출",data:divVals,
+        backgroundColor:divColors,hoverBackgroundColor:divColors,
+        borderRadius:6,borderSkipped:false,barPercentage:.82,categoryPercentage:.86}]},
+    plugins:[barLabels],
+    options:{indexAxis:"y",maintainAspectRatio:false,
+      layout:{padding:{right:28}},
+      interaction:{mode:"index",intersect:false},
+      plugins:{legend:{display:false},
+        tooltip:{backgroundColor:cssVar("--popover")||cardc,titleColor:cssVar("--foreground"),
+          bodyColor:cssVar("--foreground"),borderColor:cssVar("--border"),borderWidth:1,
+          padding:10,displayColors:false,cornerRadius:6,
+          callbacks:{label:c=>"매출 "+fmt(c.parsed.x)+" 조원"}}},
+      scales:{x:{beginAtZero:true,border:{display:false},grid:{color:grid,drawTicks:false},
+                ticks:{font:{size:11},padding:6,callback:v=>v+"조"}},
+              y:{border:{display:false},grid:{display:false},ticks:{font:{size:11}}}}}
+  });
+}
+
+// theme toggle (honors system preference on first load)
+const toggle = document.getElementById("themeToggle");
+function applyTheme(dark){
+  document.documentElement.classList.toggle("dark", dark);
+  toggle.textContent = dark ? "☀️ 라이트" : "🌙 다크";
+  if(pnlData.length) drawCharts();
+}
+let dark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+applyTheme(dark);
+toggle.addEventListener("click", ()=>{ dark=!dark; applyTheme(dark); });
+
+load();
+</script>
+</body>
+</html>
